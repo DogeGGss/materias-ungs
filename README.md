@@ -41,6 +41,10 @@ Ejecutar.bat
    - **Materias Disponibles**: Ver materias disponibles para cursar según correlativas
    - **Actualizar Materias**: Marcar materias como aprobadas usando checkboxes
 
+## Plan de estudios
+
+El plan de materias (`PlanEstudiosLoader`) sigue el plan vigente de la **Licenciatura en Sistemas** (Res. CS Nº7016/18) y la **Tecnicatura Universitaria en Informática** (Res. CS Nº9794/25, 18/12/2025). Esta última resolución sacó **Taller de Lectura y Escritura en las Disciplinas (TLED)** e **Inglés Lectocomprensión III (INGL3)** de los requisitos de la Tecnicatura: hoy son materias exclusivas de la Licenciatura.
+
 ## Base de Datos
 
 La aplicación usa H2 Database embebida. Los datos se guardan en:
