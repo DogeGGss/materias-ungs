@@ -271,7 +271,6 @@ public class DemoApplication {
 
         // Panel de estadísticas (materias faltantes)
         JPanel statsPanel = crearPanelEstadisticas();
-        panel.add(statsPanel, BorderLayout.CENTER);
 
         // Panel principal con tabs
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -287,7 +286,15 @@ public class DemoApplication {
         tabsContainer.setOpaque(false);
         tabsContainer.add(tabbedPane, BorderLayout.CENTER);
         tabsContainer.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
-        panel.add(tabsContainer, BorderLayout.SOUTH);
+        // El panel de stats va arriba con su altura natural; el de tabs ocupa todo
+        // el resto y es el que scrollea, así una lista larga no lo empuja ni tapa
+        // las estadísticas (antes stats y tabs competían por el mismo espacio, y
+        // stats perdía cuando la lista de materias crecía).
+        JPanel contenido = new JPanel(new BorderLayout());
+        contenido.setOpaque(false);
+        contenido.add(statsPanel, BorderLayout.NORTH);
+        contenido.add(tabsContainer, BorderLayout.CENTER);
+        panel.add(contenido, BorderLayout.CENTER);
 
         mainFrame.getContentPane().add(panel);
         mainFrame.revalidate();
@@ -303,96 +310,87 @@ public class DemoApplication {
         List<String> materiasAprobadas = materiaService.obtenerMateriasAprobadas(usuarioActual.getUsername());
         Map<String, Materia> todasLasMaterias = materiaService.obtenerTodasLasMaterias();
 
-        DefaultListModel<String> listModel = new DefaultListModel<>();
-        for (String codigo : materiasAprobadas) {
-            Materia materia = todasLasMaterias.get(codigo);
-            if (materia != null) {
-                listModel.addElement(codigo + " - " + materia.getNombre());
-            } else {
-                listModel.addElement(codigo); // Si no se encuentra, mostrar solo el código
-            }
+        JLabel tituloLabel = new JLabel("Materias aprobadas (" + materiasAprobadas.size() + ")");
+        tituloLabel.setFont(new Font(Tema.FUENTE, Font.BOLD, 14));
+        tituloLabel.setForeground(Tema.TEXTO_MUTED);
+        tituloLabel.setBorder(BorderFactory.createEmptyBorder(0, 2, 12, 0));
+
+        JPanel listaPanel = new JPanel();
+        listaPanel.setLayout(new BoxLayout(listaPanel, BoxLayout.Y_AXIS));
+        listaPanel.setBackground(Tema.SUPERFICIE);
+
+        if (materiasAprobadas.isEmpty()) {
+            JLabel vacioLabel = new JLabel("Todavía no marcaste ninguna materia como aprobada.");
+            vacioLabel.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+            vacioLabel.setForeground(Tema.TEXTO_MUTED);
+            listaPanel.add(vacioLabel);
         }
 
-        JList<String> lista = new JList<>(listModel);
-        lista.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
-        lista.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION); // Permite selección múltiple con Shift+Click
-        lista.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-        lista.setBackground(Tema.SUPERFICIE);
-        // Configurar colores de selección
-        lista.setSelectionBackground(Tema.TECNICATURA);
-        lista.setSelectionForeground(Color.WHITE);
-        lista.setFixedCellHeight(28);
-        JScrollPane scrollPane = new JScrollPane(lista);
-        scrollPane.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(Tema.BORDE),
-            "Lista de Materias Aprobadas (Total: " + materiasAprobadas.size() + ")",
-            0, 0,
-            new Font(Tema.FUENTE, Font.BOLD, 13),
-            Tema.TEXTO_MUTED
-        ));
+        for (String codigo : materiasAprobadas) {
+            Materia materia = todasLasMaterias.get(codigo);
+            String nombre = materia != null ? materia.getNombre() : codigo;
+            String carrera = obtenerCarreraMateria(codigo);
+            boolean ambas = "AMBAS".equals(carrera);
+            Color colorFondo = ambas ? Tema.TECNICATURA_CLARO : Tema.LICENCIATURA_CLARO;
+            Color colorAcento = ambas ? Tema.TECNICATURA : Tema.LICENCIATURA;
 
-        JButton eliminarBtn = new JButton("Eliminar materias seleccionadas");
-        eliminarBtn.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
-        eliminarBtn.setBackground(Tema.PELIGRO);
-        eliminarBtn.setForeground(Color.WHITE);
-        eliminarBtn.setMargin(new Insets(10, 22, 10, 22));
-        eliminarBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        eliminarBtn.setFocusPainted(false);
-        eliminarBtn.putClientProperty("JButton.buttonType", "roundRect");
-        eliminarBtn.addActionListener(e -> {
-            List<String> seleccionadas = lista.getSelectedValuesList();
-            if (seleccionadas != null && !seleccionadas.isEmpty()) {
-                // Construir mensaje de confirmación
-                String mensaje;
-                if (seleccionadas.size() == 1) {
-                    String codigo = seleccionadas.get(0).split(" - ")[0];
-                    Materia materia = todasLasMaterias.get(codigo);
-                    String nombreMateria = materia != null ? materia.getNombre() : codigo;
-                    mensaje = "¿Estás seguro de eliminar la materia: " + nombreMateria + "?";
-                } else {
-                    mensaje = "¿Estás seguro de eliminar las " + seleccionadas.size() + " materias seleccionadas?";
-                }
+            RoundedPanel fila = new RoundedPanel(new BorderLayout(), Tema.RADIO_CHICO);
+            fila.setBackground(colorFondo);
+            fila.setBorder(BorderFactory.createEmptyBorder(4, 14, 4, 6));
+            fila.setAlignmentX(Component.LEFT_ALIGNMENT);
+            fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
 
+            JLabel nombreLabel = new JLabel(nombre);
+            nombreLabel.setFont(new Font(Tema.FUENTE, Font.PLAIN, 14));
+            nombreLabel.setForeground(Tema.TEXTO);
+
+            JLabel carreraLabel = new JLabel(ambas ? "Ambas" : "Licenciatura");
+            carreraLabel.setFont(new Font(Tema.FUENTE, Font.BOLD, 11));
+            carreraLabel.setForeground(colorAcento);
+            carreraLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 12));
+
+            JButton borrarBtn = new JButton("✕");
+            borrarBtn.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+            borrarBtn.setForeground(Tema.TEXTO_MUTED);
+            borrarBtn.setContentAreaFilled(false);
+            borrarBtn.setBorderPainted(false);
+            borrarBtn.setFocusPainted(false);
+            borrarBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            borrarBtn.setToolTipText("Eliminar de materias aprobadas");
+            borrarBtn.addActionListener(e -> {
                 int confirmacion = JOptionPane.showConfirmDialog(
                     mainFrame,
-                    mensaje,
+                    "¿Eliminar \"" + nombre + "\" de tus materias aprobadas?",
                     "Confirmar eliminación",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE
                 );
                 if (confirmacion == JOptionPane.YES_OPTION) {
-                    // Eliminar todas las materias seleccionadas
-                    for (String seleccionada : seleccionadas) {
-                        String codigo = seleccionada.split(" - ")[0];
-                        materiaService.eliminarMateriaAprobada(usuarioActual.getUsername(), codigo);
-                        listModel.removeElement(seleccionada);
-                    }
-
-                    String mensajeExito = seleccionadas.size() == 1
-                        ? "Materia eliminada correctamente"
-                        : seleccionadas.size() + " materias eliminadas correctamente";
-
-                    JOptionPane.showMessageDialog(mainFrame,
-                        mensajeExito,
-                        "Éxito",
-                        JOptionPane.INFORMATION_MESSAGE);
+                    materiaService.eliminarMateriaAprobada(usuarioActual.getUsername(), codigo);
                     mostrarDashboard(); // Refrescar para actualizar estadísticas
                 }
-            } else {
-                JOptionPane.showMessageDialog(mainFrame,
-                    "Por favor selecciona al menos una materia\n(Usa Shift+Click para seleccionar múltiples)",
-                    "Advertencia",
-                    JOptionPane.WARNING_MESSAGE);
-            }
-        });
+            });
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        buttonPanel.setOpaque(false);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(14, 0, 0, 0));
-        buttonPanel.add(eliminarBtn);
+            JPanel derecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+            derecha.setOpaque(false);
+            derecha.add(carreraLabel);
+            derecha.add(borrarBtn);
 
+            fila.add(nombreLabel, BorderLayout.CENTER);
+            fila.add(derecha, BorderLayout.EAST);
+
+            listaPanel.add(fila);
+            listaPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+        }
+
+        JScrollPane scrollPane = new JScrollPane(listaPanel);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Tema.SUPERFICIE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        panel.add(tituloLabel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
     }
