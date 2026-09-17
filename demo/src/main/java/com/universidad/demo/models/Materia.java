@@ -61,20 +61,11 @@ public class Materia {
             return true;
         }
         // Verificar que todas las correlativas estén aprobadas (comparación case-sensitive y sin espacios)
-        boolean puedeCursar = correlativasCodigos.stream()
+        return correlativasCodigos.stream()
             .map(String::trim) // Eliminar espacios
             .allMatch(codigo -> materiasAprobadas.stream()
                 .map(String::trim)
                 .anyMatch(aprobada -> aprobada.equals(codigo)));
-        
-        // Debug para ISOC específicamente
-        if ("ISOC".equals(this.codigo)) {
-            System.out.println("DEBUG ISOC - Correlativas requeridas: " + correlativasCodigos);
-            System.out.println("DEBUG ISOC - Materias aprobadas: " + materiasAprobadas);
-            System.out.println("DEBUG ISOC - Puede cursar: " + puedeCursar);
-        }
-        
-        return puedeCursar;
     }
 
     // Método para marcar como aprobada
