@@ -445,9 +445,9 @@ public class DemoApplication {
         List<String> materiasAprobadas = materiaService.obtenerMateriasAprobadas(usuarioActual.getUsername());
         Map<String, Materia> todasLasMaterias = materiaService.obtenerTodasLasMaterias();
         
-        // Calcular materias de Tecnicatura aprobadas
+        // Calcular materias de Tecnicatura aprobadas (solo las que pertenecen a ese plan)
         long materiasTecnicaturaAprobadas = materiasAprobadas.stream()
-            .filter(codigo -> todasLasMaterias.containsKey(codigo))
+            .filter(MATERIAS_TECNICATURA::contains)
             .count();
         int faltantesTecnicatura = Math.max(0, TOTAL_MATERIAS_TECNICATURA - (int)materiasTecnicaturaAprobadas);
         
