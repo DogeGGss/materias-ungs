@@ -26,11 +26,10 @@ cd demo
 mvn spring-boot:run
 ```
 
-### Opción 3: Ejecutar el archivo .bat (Windows)
-```bash
-cd demo
-Ejecutar.bat
-```
+### Opción 3: Doble click en `Ejecutar.bat` (Windows)
+La primera vez compila el proyecto (tarda un poco); las siguientes abre directo. No deja ninguna consola abierta de fondo — corre el `.jar` empaquetado con `javaw`, así que solo se ve la ventana de la app.
+
+Si modificás el código (por ejemplo para agregar un usuario nuevo), corré `Recompilar.bat` antes de volver a abrir la app, para que tome los cambios.
 
 ## Uso
 
