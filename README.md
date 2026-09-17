@@ -4,7 +4,7 @@ Aplicación de escritorio desarrollada con Java Swing y Spring Boot para la gest
 
 ## Características
 
-- Interfaz gráfica moderna con Java Swing
+- Interfaz gráfica con [FlatLaf](https://www.formdev.com/flatlaf/) (look & feel moderno, tarjetas con esquinas redondeadas, avatares circulares)
 - Gestión de materias aprobadas por estudiante
 - Visualización de materias disponibles para cursar (basado en correlativas)
 - Base de datos H2 embebida (los datos se guardan localmente)
