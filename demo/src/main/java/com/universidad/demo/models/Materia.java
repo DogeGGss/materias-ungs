@@ -11,9 +11,15 @@ public class Materia {
     private int horasTotales;
     private boolean aprobada;
     private List<String> correlativasCodigos;
+    // Correlativas alternativas para cuando la materia se cursa desde la Tecnicatura.
+    // Solo se completa en las materias compartidas ("Ambas") donde la correlativa
+    // real es distinta según la carrera (ej: MATD pide ALG y CALC en Licenciatura,
+    // pero esas materias no existen en la Tecnicatura). Si es null, se usa la misma
+    // lista que correlativasCodigos para las dos carreras.
+    private List<String> correlativasTecnicatura;
 
     // Constructor completo
-    public Materia(String codigo, String nombre, String regimen, 
+    public Materia(String codigo, String nombre, String regimen,
                   int horasSemanales, int horasTotales,
                   List<String> correlativasCodigos) {
         this.codigo = codigo;
@@ -23,6 +29,12 @@ public class Materia {
         this.horasTotales = horasTotales;
         this.correlativasCodigos = correlativasCodigos;
         this.aprobada = false; // Por defecto no aprobada
+    }
+
+    // Declara una ruta de correlativas alternativa para cursar esta materia desde la Tecnicatura.
+    public Materia conCorrelativasTecnicatura(List<String> correlativasTecnicatura) {
+        this.correlativasTecnicatura = correlativasTecnicatura;
+        return this;
     }
 
     // Getters
@@ -54,14 +66,24 @@ public class Materia {
         return correlativasCodigos;
     }
 
-    // Método para verificar si se puede cursar
+    // Método para verificar si se puede cursar.
+    // Si la materia tiene una ruta alternativa para Tecnicatura, alcanza con cumplir
+    // cualquiera de las dos (la app no distingue en qué carrera está el usuario).
     public boolean puedeCursar(Map<String, Materia> todasLasMaterias, List<String> materiasAprobadas) {
+        if (cumpleCorrelativas(correlativasCodigos, materiasAprobadas)) {
+            return true;
+        }
+        return correlativasTecnicatura != null
+            && cumpleCorrelativas(correlativasTecnicatura, materiasAprobadas);
+    }
+
+    private static boolean cumpleCorrelativas(List<String> correlativas, List<String> materiasAprobadas) {
         // Si no hay correlativas, se puede cursar
-        if (correlativasCodigos == null || correlativasCodigos.isEmpty()) {
+        if (correlativas == null || correlativas.isEmpty()) {
             return true;
         }
         // Verificar que todas las correlativas estén aprobadas (comparación case-sensitive y sin espacios)
-        return correlativasCodigos.stream()
+        return correlativas.stream()
             .map(String::trim) // Eliminar espacios
             .allMatch(codigo -> materiasAprobadas.stream()
                 .map(String::trim)

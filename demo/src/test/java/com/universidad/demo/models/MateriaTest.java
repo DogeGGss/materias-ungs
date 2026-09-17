@@ -44,4 +44,32 @@ class MateriaTest {
 
         assertTrue(materia.puedeCursar(Map.of(), List.of("IPROG", "TIC ")));
     }
+
+    @Test
+    void puedeCursarPorLaRutaDeTecnicaturaAunqueNoCumplaLaGeneral() {
+        // MATD en Licenciatura pide LYTN + CALC + ALG, pero en Tecnicatura alcanza con LYTN.
+        Materia materia = new Materia("MATD", "Matemática Discreta", "Semestral", 6, 96,
+                List.of("LYTN", "CALC", "ALG"))
+                .conCorrelativasTecnicatura(List.of("LYTN"));
+
+        assertTrue(materia.puedeCursar(Map.of(), List.of("LYTN")));
+    }
+
+    @Test
+    void noPuedeCursarSiNoCumpleNingunaDeLasDosRutas() {
+        Materia materia = new Materia("MATD", "Matemática Discreta", "Semestral", 6, 96,
+                List.of("LYTN", "CALC", "ALG"))
+                .conCorrelativasTecnicatura(List.of("LYTN"));
+
+        assertFalse(materia.puedeCursar(Map.of(), List.of("IMAT")));
+    }
+
+    @Test
+    void puedeCursarPorLaRutaGeneralAunqueNoCumplaLaDeTecnicatura() {
+        Materia materia = new Materia("MATD", "Matemática Discreta", "Semestral", 6, 96,
+                List.of("LYTN", "CALC", "ALG"))
+                .conCorrelativasTecnicatura(List.of("LYTN", "IMAT"));
+
+        assertTrue(materia.puedeCursar(Map.of(), List.of("LYTN", "CALC", "ALG")));
+    }
 }

@@ -97,9 +97,11 @@ public class PlanEstudiosLoader {
             "Semestral", 8, 128, List.of("LYTN", "PROG2", "ORG1")));
             
         materias.put("MATD", new Materia(
-            "MATD", 
+            "MATD",
             "Matemática Discreta",
-            "Semestral", 6, 96, List.of("LYTN", "CALC", "ALG")));
+            "Semestral", 6, 96, List.of("LYTN", "CALC", "ALG"))
+            // En Tecnicatura no existen ALG ni CALC: alcanza con LYTN.
+            .conCorrelativasTecnicatura(List.of("LYTN")));
             
         materias.put("EVS", new Materia(
             "EVS", 
@@ -123,9 +125,11 @@ public class PlanEstudiosLoader {
         
         // Cuarto Año
         materias.put("PPS1", new Materia(
-            "PPS1", 
-            "Proyecto Profesional I",
-            "Semestral", 8, 128, List.of("PSC", "TLED", "BD1", "ING1", "EVS")));
+            "PPS1",
+            "Proyecto Profesional I", // En Tecnicatura: Laboratorio de Construcción de Software
+            "Semestral", 8, 128, List.of("PSC", "TLED", "BD1", "ING1", "EVS"))
+            // TLED no es parte de la Tecnicatura, así que ahí no puede pedirse como correlativa.
+            .conCorrelativasTecnicatura(List.of("PSC", "BD1", "ING1", "EVS")));
             
         materias.put("ING2", new Materia(
             "ING2", 

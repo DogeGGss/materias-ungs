@@ -20,18 +20,21 @@ import java.util.Map;
 public class DemoApplication {
     
     // Totales de materias por carrera según los planes de estudio
-    private static final int TOTAL_MATERIAS_TECNICATURA = 19;
+    private static final int TOTAL_MATERIAS_TECNICATURA = 20;
     private static final int TOTAL_MATERIAS_LICENCIATURA = 37;
 
-    // Materias de Tecnicatura (19 materias) - según el plan de estudios vigente
+    // Materias de Tecnicatura (20 materias) - según el plan de estudios vigente
     // Actualizado según Resolución (CS) UNGS N° 9794/25 (18/12/2025), que deroga la
     // Res. 7673/20 y saca TLED e INGL3 de la Tecnicatura: pasan a ser exclusivas de Licenciatura.
+    // PPS1 (Proyecto Profesional I / "Laboratorio de Construcción de Software" en Tecnicatura)
+    // sí es compartida entre las dos carreras, aunque con correlativas distintas
+    // (ver Materia.correlativasTecnicatura y PlanEstudiosLoader).
     // NOTA: Todas las materias de Tecnicatura están también en Licenciatura
-    // Las materias exclusivas de Licenciatura son: ALG, CALC, TCOM, PYE, PPS1, ING2, ORG2, PPS2, BD2, SOR2, PPS, MOD, ISOC, TTES, GPRO, LABI, TLED, INGL3
+    // Las materias exclusivas de Licenciatura son: ALG, CALC, TCOM, PYE, ING2, ORG2, PPS2, BD2, SOR2, PPS, MOD, ISOC, TTES, GPRO, LABI, TLED, INGL3
     private static final List<String> MATERIAS_TECNICATURA = List.of(
         "TIC", "TIO", "TIO-MAT", "IPROG", "IMAT", "PROG1", "ORG1",
         "PROG2", "SOR1", "LYTN", "PROG3", "PSC", "BD1", "MATD", "EVS",
-        "ING1", "TUTIL", "INGL1", "INGL2"
+        "ING1", "TUTIL", "INGL1", "INGL2", "PPS1"
         // LABI, TLED e INGL3 NO están en Tecnicatura, solo en Licenciatura
     );
     
