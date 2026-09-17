@@ -57,4 +57,20 @@ class MateriaServiceTest {
 
         assertEquals(0, semestres);
     }
+
+    @Test
+    void elCaminoDetalladoMuestraQueMateriaVaEnCadaSemestre() {
+        MateriaService service = new MateriaService(planDePrueba(), null);
+
+        List<List<Materia>> camino = service.planificarCamino(planDePrueba().keySet(), List.of(), 2);
+
+        assertEquals(3, camino.size());
+        assertEquals(List.of("A"), codigos(camino.get(0)));
+        assertEquals(List.of("B", "C"), codigos(camino.get(1)));
+        assertEquals(List.of("D"), codigos(camino.get(2)));
+    }
+
+    private List<String> codigos(List<Materia> materias) {
+        return materias.stream().map(Materia::getCodigo).sorted().collect(java.util.stream.Collectors.toList());
+    }
 }

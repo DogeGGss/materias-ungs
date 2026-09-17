@@ -55,20 +55,26 @@ public class MateriaService {
         return materia.puedeCursar(todasLasMaterias, materiasAprobadas);
     }
 
-    // Estima cuántos semestres faltan para terminar un plan (el conjunto de códigos
-    // que lo componen), cursando como máximo "ritmoPorSemestre" materias por semestre
-    // y respetando correlativas. En cada semestre elige, entre las disponibles, las
-    // que más otras materias pendientes desbloquean directamente — así prioriza
-    // destrabar el resto del plan en vez de tomar materias al azar.
+    // Estima cuántos semestres faltan para terminar un plan, cursando como máximo
+    // "ritmoPorSemestre" materias por semestre.
     public int estimarSemestresRestantes(Collection<String> codigosDelPlan, List<String> materiasAprobadas, int ritmoPorSemestre) {
+        return planificarCamino(codigosDelPlan, materiasAprobadas, ritmoPorSemestre).size();
+    }
+
+    // Arma el camino semestre a semestre para terminar un plan (el conjunto de
+    // códigos que lo componen), cursando como máximo "ritmoPorSemestre" materias
+    // por semestre y respetando correlativas. En cada semestre elige, entre las
+    // disponibles, las que más otras materias pendientes desbloquean directamente
+    // — así prioriza destrabar el resto del plan en vez de tomar materias al azar.
+    public List<List<Materia>> planificarCamino(Collection<String> codigosDelPlan, List<String> materiasAprobadas, int ritmoPorSemestre) {
         List<String> aprobadasSimuladas = new ArrayList<>(materiasAprobadas);
         List<String> pendientes = codigosDelPlan.stream()
             .filter(codigo -> !aprobadasSimuladas.contains(codigo))
             .collect(Collectors.toList());
 
-        int semestres = 0;
+        List<List<Materia>> camino = new ArrayList<>();
         // Límite de seguridad por si el plan tuviera correlativas circulares o datos inconsistentes.
-        while (!pendientes.isEmpty() && semestres < 200) {
+        while (!pendientes.isEmpty() && camino.size() < 200) {
             List<String> pendientesActuales = pendientes;
             List<Materia> disponibles = pendientes.stream()
                 .map(todasLasMaterias::get)
@@ -82,16 +88,16 @@ public class MateriaService {
                 break; // no debería pasar con un plan consistente
             }
 
-            List<String> tomar = disponibles.stream()
+            List<Materia> tomar = disponibles.stream()
                 .limit(ritmoPorSemestre)
-                .map(Materia::getCodigo)
                 .collect(Collectors.toList());
+            List<String> codigosTomados = tomar.stream().map(Materia::getCodigo).collect(Collectors.toList());
 
-            aprobadasSimuladas.addAll(tomar);
-            pendientes.removeAll(tomar);
-            semestres++;
+            aprobadasSimuladas.addAll(codigosTomados);
+            pendientes.removeAll(codigosTomados);
+            camino.add(tomar);
         }
-        return semestres;
+        return camino;
     }
 
     private int contarDependientesDirectos(String codigo, List<String> pendientes) {

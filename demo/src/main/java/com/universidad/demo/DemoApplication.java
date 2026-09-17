@@ -15,6 +15,8 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -470,6 +472,10 @@ public class DemoApplication {
         panel.setColorBorde(Tema.BORDE);
 
         List<Materia> materiasDisponibles = materiaService.obtenerMateriasDisponibles(usuarioActual);
+        // Las compartidas (Ambas) primero, así se ven antes que las exclusivas de Licenciatura.
+        materiasDisponibles.sort(Comparator.comparing(
+            materia -> "AMBAS".equals(obtenerCarreraMateria(materia.getCodigo())) ? 0 : 1
+        ));
         List<String> materiasAprobadas = materiaService.obtenerMateriasAprobadas(usuarioActual.getUsername());
 
         // Panel superior con información
@@ -628,10 +634,106 @@ public class DemoApplication {
             tablaPanel.add(Box.createRigidArea(new Dimension(0, 6)));
         }
 
+        // Detalle: qué materias tocarían en cada semestre, para una carrera y ritmo elegidos.
+        JLabel detalleTitulo = new JLabel("Ver el camino paso a paso");
+        detalleTitulo.setFont(new Font(Tema.FUENTE, Font.BOLD, 14));
+        detalleTitulo.setForeground(Tema.TEXTO_MUTED);
+        detalleTitulo.setBorder(BorderFactory.createEmptyBorder(24, 0, 10, 0));
+
+        JComboBox<String> carreraCombo = new JComboBox<>(new String[]{"Tecnicatura", "Licenciatura"});
+        carreraCombo.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+
+        JComboBox<Integer> ritmoCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4});
+        ritmoCombo.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+        ritmoCombo.setSelectedItem(2);
+
+        JPanel selectoresPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        selectoresPanel.setOpaque(false);
+        JLabel etiquetaCarrera = new JLabel("Carrera:");
+        etiquetaCarrera.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+        etiquetaCarrera.setForeground(Tema.TEXTO_MUTED);
+        JLabel etiquetaRitmoCombo = new JLabel("Ritmo:");
+        etiquetaRitmoCombo.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+        etiquetaRitmoCombo.setForeground(Tema.TEXTO_MUTED);
+        etiquetaRitmoCombo.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 0));
+        selectoresPanel.add(etiquetaCarrera);
+        selectoresPanel.add(carreraCombo);
+        selectoresPanel.add(etiquetaRitmoCombo);
+        selectoresPanel.add(ritmoCombo);
+
+        JPanel detalleContainer = new JPanel();
+        detalleContainer.setLayout(new BoxLayout(detalleContainer, BoxLayout.Y_AXIS));
+        detalleContainer.setOpaque(false);
+        detalleContainer.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+
+        Runnable actualizarDetalle = () -> {
+            detalleContainer.removeAll();
+            boolean esTecnicatura = "Tecnicatura".equals(carreraCombo.getSelectedItem());
+            int ritmoElegido = (Integer) ritmoCombo.getSelectedItem();
+            Collection<String> codigosPlan = esTecnicatura ? MATERIAS_TECNICATURA : todasLasMaterias.keySet();
+            Color colorCarrera = esTecnicatura ? Tema.TECNICATURA : Tema.LICENCIATURA;
+            Color colorCarreraClaro = esTecnicatura ? Tema.TECNICATURA_CLARO : Tema.LICENCIATURA_CLARO;
+
+            List<List<Materia>> camino = materiaService.planificarCamino(codigosPlan, materiasAprobadas, ritmoElegido);
+
+            if (camino.isEmpty()) {
+                JLabel completoLabel = new JLabel("Ya no te queda ninguna materia pendiente en esta carrera.");
+                completoLabel.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+                completoLabel.setForeground(Tema.TEXTO_MUTED);
+                detalleContainer.add(completoLabel);
+            }
+            for (int i = 0; i < camino.size(); i++) {
+                String nombres = camino.get(i).stream()
+                    .map(Materia::getNombre)
+                    .collect(java.util.stream.Collectors.joining(", "));
+
+                RoundedPanel filaSemestre = new RoundedPanel(new BorderLayout(12, 0), Tema.RADIO_CHICO);
+                filaSemestre.setBackground(colorCarreraClaro);
+                filaSemestre.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+                filaSemestre.setAlignmentX(Component.LEFT_ALIGNMENT);
+                filaSemestre.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+
+                JLabel semestreLabel = new JLabel("Semestre " + (i + 1));
+                semestreLabel.setFont(new Font(Tema.FUENTE, Font.BOLD, 13));
+                semestreLabel.setForeground(colorCarrera);
+                semestreLabel.setPreferredSize(new Dimension(110, semestreLabel.getPreferredSize().height));
+
+                JLabel nombresLabel = new JLabel(nombres);
+                nombresLabel.setFont(new Font(Tema.FUENTE, Font.PLAIN, 13));
+                nombresLabel.setForeground(Tema.TEXTO);
+
+                filaSemestre.add(semestreLabel, BorderLayout.WEST);
+                filaSemestre.add(nombresLabel, BorderLayout.CENTER);
+
+                detalleContainer.add(filaSemestre);
+                detalleContainer.add(Box.createRigidArea(new Dimension(0, 8)));
+            }
+
+            detalleContainer.revalidate();
+            detalleContainer.repaint();
+        };
+
+        carreraCombo.addActionListener(e -> actualizarDetalle.run());
+        ritmoCombo.addActionListener(e -> actualizarDetalle.run());
+        actualizarDetalle.run();
+
+        JPanel detalleSeccion = new JPanel();
+        detalleSeccion.setLayout(new BoxLayout(detalleSeccion, BoxLayout.Y_AXIS));
+        detalleSeccion.setOpaque(false);
+        detalleSeccion.add(detalleTitulo);
+        detalleSeccion.add(selectoresPanel);
+        detalleSeccion.add(detalleContainer);
+
+        JPanel contenidoVertical = new JPanel();
+        contenidoVertical.setLayout(new BoxLayout(contenidoVertical, BoxLayout.Y_AXIS));
+        contenidoVertical.setOpaque(false);
+        contenidoVertical.add(tablaPanel);
+        contenidoVertical.add(detalleSeccion);
+
         JPanel abajo = new JPanel(new BorderLayout());
         abajo.setOpaque(false);
         abajo.add(caminoHeader, BorderLayout.NORTH);
-        abajo.add(tablaPanel, BorderLayout.CENTER);
+        abajo.add(contenidoVertical, BorderLayout.CENTER);
 
         JScrollPane scrollPane = new JScrollPane(abajo);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
