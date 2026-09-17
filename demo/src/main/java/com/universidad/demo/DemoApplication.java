@@ -5,6 +5,7 @@ import com.universidad.demo.models.Materia;
 import com.universidad.demo.models.Usuario;
 import com.universidad.demo.services.MateriaService;
 import com.universidad.demo.ui.Avatares;
+import com.universidad.demo.ui.DonutChart;
 import com.universidad.demo.ui.RoundedPanel;
 import com.universidad.demo.ui.Tema;
 import org.springframework.boot.SpringApplication;
@@ -281,6 +282,9 @@ public class DemoApplication {
 
         // Tab 2: Materias Disponibles y Actualizar (combinado)
         tabbedPane.addTab("Materias Disponibles / Actualizar", crearPanelMateriasDisponiblesYActualizar());
+
+        // Tab 3: Progreso y proyección de semestres
+        tabbedPane.addTab("Progreso", crearPanelProgreso());
 
         JPanel tabsContainer = new JPanel(new BorderLayout());
         tabsContainer.setOpaque(false);
@@ -571,5 +575,100 @@ public class DemoApplication {
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
+    }
+
+    private static JPanel crearPanelProgreso() {
+        RoundedPanel panel = new RoundedPanel(new BorderLayout(), Tema.RADIO_TARJETA);
+        panel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        panel.setBackground(Tema.SUPERFICIE);
+        panel.setColorBorde(Tema.BORDE);
+
+        List<String> materiasAprobadas = materiaService.obtenerMateriasAprobadas(usuarioActual.getUsername());
+        Map<String, Materia> todasLasMaterias = materiaService.obtenerTodasLasMaterias();
+
+        long tecAprobadas = materiasAprobadas.stream().filter(MATERIAS_TECNICATURA::contains).count();
+        int porcentajeTec = (int) Math.round(100.0 * tecAprobadas / TOTAL_MATERIAS_TECNICATURA);
+
+        long licAprobadas = materiasAprobadas.stream().filter(todasLasMaterias::containsKey).count();
+        int porcentajeLic = (int) Math.round(100.0 * licAprobadas / TOTAL_MATERIAS_LICENCIATURA);
+
+        JPanel graficos = new JPanel(new FlowLayout(FlowLayout.CENTER, 48, 0));
+        graficos.setOpaque(false);
+        graficos.add(new DonutChart(porcentajeTec, Tema.TECNICATURA, "Tecnicatura"));
+        graficos.add(new DonutChart(porcentajeLic, Tema.LICENCIATURA, "Licenciatura"));
+
+        JLabel caminoTitulo = new JLabel("Camino mínimo para recibirte");
+        caminoTitulo.setFont(new Font(Tema.FUENTE, Font.BOLD, 14));
+        caminoTitulo.setForeground(Tema.TEXTO_MUTED);
+
+        JLabel caminoSub = new JLabel(
+            "<html>Estimación respetando correlativas: en cada semestre se priorizan las materias<br>"
+            + "que más habilitan el resto del plan. Es una referencia, no una garantía.</html>");
+        caminoSub.setFont(new Font(Tema.FUENTE, Font.PLAIN, 12));
+        caminoSub.setForeground(Tema.TEXTO_MUTED);
+
+        JPanel caminoHeader = new JPanel(new BorderLayout(0, 4));
+        caminoHeader.setOpaque(false);
+        caminoHeader.add(caminoTitulo, BorderLayout.NORTH);
+        caminoHeader.add(caminoSub, BorderLayout.CENTER);
+        caminoHeader.setBorder(BorderFactory.createEmptyBorder(24, 0, 12, 0));
+
+        JPanel tablaPanel = new JPanel();
+        tablaPanel.setLayout(new BoxLayout(tablaPanel, BoxLayout.Y_AXIS));
+        tablaPanel.setOpaque(false);
+
+        tablaPanel.add(crearFilaCamino("Ritmo", "Tecnicatura", "Licenciatura", true));
+        tablaPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+
+        for (int ritmo = 1; ritmo <= 4; ritmo++) {
+            int semestresTec = materiaService.estimarSemestresRestantes(MATERIAS_TECNICATURA, materiasAprobadas, ritmo);
+            int semestresLic = materiaService.estimarSemestresRestantes(todasLasMaterias.keySet(), materiasAprobadas, ritmo);
+            String etiquetaRitmo = ritmo + (ritmo == 1 ? " materia / semestre" : " materias / semestre");
+            tablaPanel.add(crearFilaCamino(etiquetaRitmo, formatearSemestres(semestresTec), formatearSemestres(semestresLic), false));
+            tablaPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+        }
+
+        JPanel abajo = new JPanel(new BorderLayout());
+        abajo.setOpaque(false);
+        abajo.add(caminoHeader, BorderLayout.NORTH);
+        abajo.add(tablaPanel, BorderLayout.CENTER);
+
+        JScrollPane scrollPane = new JScrollPane(abajo);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Tema.SUPERFICIE);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        panel.add(graficos, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private static String formatearSemestres(int semestres) {
+        if (semestres == 0) {
+            return "¡Completo!";
+        }
+        double anios = semestres / 2.0;
+        String textoAnios = anios == Math.floor(anios)
+            ? (int) anios + (anios == 1 ? " año" : " años")
+            : String.format(java.util.Locale.forLanguageTag("es"), "%.1f años", anios);
+        return semestres + (semestres == 1 ? " semestre" : " semestres") + " (~" + textoAnios + ")";
+    }
+
+    private static JPanel crearFilaCamino(String colRitmo, String colTec, String colLic, boolean esEncabezado) {
+        JPanel fila = new JPanel(new GridLayout(1, 3, 16, 0));
+        fila.setOpaque(false);
+        fila.add(crearCeldaCamino(colRitmo, esEncabezado, Tema.TEXTO));
+        fila.add(crearCeldaCamino(colTec, esEncabezado, Tema.TECNICATURA));
+        fila.add(crearCeldaCamino(colLic, esEncabezado, Tema.LICENCIATURA));
+        return fila;
+    }
+
+    private static JLabel crearCeldaCamino(String texto, boolean esEncabezado, Color colorTexto) {
+        JLabel label = new JLabel(texto);
+        label.setFont(new Font(Tema.FUENTE, esEncabezado ? Font.BOLD : Font.PLAIN, 13));
+        label.setForeground(esEncabezado ? Tema.TEXTO_MUTED : colorTexto);
+        return label;
     }
 }

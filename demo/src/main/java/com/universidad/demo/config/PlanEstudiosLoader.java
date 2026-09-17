@@ -198,9 +198,11 @@ public class PlanEstudiosLoader {
             "Semestral", 3, 48, List.of("TIC")));
             
         materias.put("INGL2", new Materia(
-            "INGL2", 
+            "INGL2",
             "Inglés Lectocomprensión II",
-            "Semestral", 3, 48, List.of("INGL1", "TLED")));
+            "Semestral", 3, 48, List.of("INGL1", "TLED"))
+            // TLED no es parte de la Tecnicatura: ahí alcanza con INGL1.
+            .conCorrelativasTecnicatura(List.of("INGL1")));
             
         materias.put("INGL3", new Materia(
             "INGL3", 

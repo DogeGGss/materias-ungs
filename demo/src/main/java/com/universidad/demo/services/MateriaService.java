@@ -7,6 +7,9 @@ import com.universidad.demo.repositories.MateriaAprobadaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,29 +32,77 @@ public class MateriaService {
 
     // Método para obtener las materias disponibles para cursar
     public List<Materia> obtenerMateriasDisponibles(Usuario usuario) {
-        // Obtener los códigos de las materias aprobadas del usuario
-        List<String> materiasAprobadas = materiaAprobadaRepository.findByUsername(usuario.getUsername())
-                .stream()
-                .map(MateriaAprobada::getMateriaCodigo)
-                .collect(Collectors.toList());
-
-        // Contar materias de Licenciatura aprobadas (todas las materias del plan completo)
-        long materiasLicenciaturaAprobadas = materiasAprobadas.stream()
-            .filter(codigo -> todasLasMaterias.containsKey(codigo))
-            .count();
+        List<String> materiasAprobadas = obtenerMateriasAprobadas(usuario.getUsername());
 
         // Filtrar las materias disponibles
         return todasLasMaterias.values().stream()
                 .filter(materia -> !materiasAprobadas.contains(materia.getCodigo())) // Excluir materias aprobadas
-                .filter(materia -> {
-                    // LABI requiere 14 materias aprobadas de Licenciatura
-                    if ("LABI".equals(materia.getCodigo())) {
-                        return materiasLicenciaturaAprobadas >= 14;
-                    }
-                    // Para otras materias, verificar correlativas normales
-                    return materia.puedeCursar(todasLasMaterias, materiasAprobadas);
-                })
+                .filter(materia -> puedeCursarAhora(materia, materiasAprobadas))
                 .collect(Collectors.toList());
+    }
+
+    // Si una materia se puede cursar ya mismo, dadas las materias aprobadas.
+    // Centraliza el caso especial de LABI (requiere 14 materias de Licenciatura,
+    // no correlativas puntuales) para que tanto "materias disponibles" como la
+    // estimación de semestres usen exactamente la misma regla.
+    private boolean puedeCursarAhora(Materia materia, List<String> materiasAprobadas) {
+        if ("LABI".equals(materia.getCodigo())) {
+            long materiasLicenciaturaAprobadas = materiasAprobadas.stream()
+                .filter(todasLasMaterias::containsKey)
+                .count();
+            return materiasLicenciaturaAprobadas >= 14;
+        }
+        return materia.puedeCursar(todasLasMaterias, materiasAprobadas);
+    }
+
+    // Estima cuántos semestres faltan para terminar un plan (el conjunto de códigos
+    // que lo componen), cursando como máximo "ritmoPorSemestre" materias por semestre
+    // y respetando correlativas. En cada semestre elige, entre las disponibles, las
+    // que más otras materias pendientes desbloquean directamente — así prioriza
+    // destrabar el resto del plan en vez de tomar materias al azar.
+    public int estimarSemestresRestantes(Collection<String> codigosDelPlan, List<String> materiasAprobadas, int ritmoPorSemestre) {
+        List<String> aprobadasSimuladas = new ArrayList<>(materiasAprobadas);
+        List<String> pendientes = codigosDelPlan.stream()
+            .filter(codigo -> !aprobadasSimuladas.contains(codigo))
+            .collect(Collectors.toList());
+
+        int semestres = 0;
+        // Límite de seguridad por si el plan tuviera correlativas circulares o datos inconsistentes.
+        while (!pendientes.isEmpty() && semestres < 200) {
+            List<String> pendientesActuales = pendientes;
+            List<Materia> disponibles = pendientes.stream()
+                .map(todasLasMaterias::get)
+                .filter(materia -> materia != null && puedeCursarAhora(materia, aprobadasSimuladas))
+                .sorted(Comparator.comparingInt(
+                    (Materia materia) -> contarDependientesDirectos(materia.getCodigo(), pendientesActuales)
+                ).reversed())
+                .collect(Collectors.toList());
+
+            if (disponibles.isEmpty()) {
+                break; // no debería pasar con un plan consistente
+            }
+
+            List<String> tomar = disponibles.stream()
+                .limit(ritmoPorSemestre)
+                .map(Materia::getCodigo)
+                .collect(Collectors.toList());
+
+            aprobadasSimuladas.addAll(tomar);
+            pendientes.removeAll(tomar);
+            semestres++;
+        }
+        return semestres;
+    }
+
+    private int contarDependientesDirectos(String codigo, List<String> pendientes) {
+        int cantidad = 0;
+        for (String otroCodigo : pendientes) {
+            Materia otra = todasLasMaterias.get(otroCodigo);
+            if (otra != null && otra.getCorrelativasCodigos() != null && otra.getCorrelativasCodigos().contains(codigo)) {
+                cantidad++;
+            }
+        }
+        return cantidad;
     }
     // Método para obtener las materias aprobadas de un usuario
     public List<String> obtenerMateriasAprobadas(String username) {

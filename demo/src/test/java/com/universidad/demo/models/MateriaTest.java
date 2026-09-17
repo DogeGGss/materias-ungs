@@ -72,4 +72,15 @@ class MateriaTest {
 
         assertTrue(materia.puedeCursar(Map.of(), List.of("LYTN", "CALC", "ALG")));
     }
+
+    @Test
+    void ingl2PuedeCursarseEnTecnicaturaSinTled() {
+        // Mismo caso que MATD: en Licenciatura INGL2 pide INGL1 + TLED, pero TLED
+        // no es parte de la Tecnicatura, así que ahí alcanza con INGL1.
+        Materia materia = new Materia("INGL2", "Inglés Lectocomprensión II", "Semestral", 3, 48,
+                List.of("INGL1", "TLED"))
+                .conCorrelativasTecnicatura(List.of("INGL1"));
+
+        assertTrue(materia.puedeCursar(Map.of(), List.of("INGL1")));
+    }
 }
